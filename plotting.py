@@ -5,7 +5,10 @@ import plotly.graph_objects as go
 from tools import *
 
 # Function to combine lines for neuron output animation
-def make_plot_data(par, x, y, n_hidden, include_hidden=False):
+def make_plot_data(
+    par, x, y, n_hidden, include_hidden=False, x_samp=None, y_samp=None, 
+    include_samps=False
+):
     # Find neuron outputs
     par_np = par.detach().numpy()
     W0, b0, W1, b1 = par_split(par_np, n_hidden)
@@ -15,6 +18,11 @@ def make_plot_data(par, x, y, n_hidden, include_hidden=False):
 
     # Make plot data for target function, neurons in hidden layer, and output
     data = [go.Scatter(x=x[:, 0], y=y[:, 0], name="y")]
+    if (include_samps):
+        data = data + [go.Scatter(
+            x=x_samp[:, 0], y=y_samp[:, 0], mode='markers', marker_color='black',
+            name=f"batch samples"
+        )]
     if (include_hidden):
         for n in np.arange(n_hidden):
             data = data + [go.Scatter(
@@ -25,31 +33,24 @@ def make_plot_data(par, x, y, n_hidden, include_hidden=False):
     return data
 
 # Function to plot neuron outputs
-def plot_neurons(par, x, y, n_hidden):
+def plot_neurons(par, x, y, n_hidden, title):
     data = make_plot_data(par, x, y, n_hidden, include_hidden=True)
     layout = dict(
-        title='Two-layer neuron outputs', xaxis_title="x", 
+        title=title, xaxis_title="x", 
         yaxis_title='outputs', autosize=False, width=600, height=400
     )
     fig = go.Figure(data=data, layout=layout)
+    y_np = y.detach().numpy()
+    fig.update_yaxes(range=[np.min(y_np) - 0.1, np.max(y_np) + 0.1])
     fig.update_traces(hoverinfo='skip')
     fig.show()
 
-# Function to make frame for animation
-def make_frame(par, x, y, n_hidden):
-    data = make_plot_data(par, x, y, n_hidden)
-    layout = dict(
-            title='Two-layer neuron outputs', xaxis_title="x", 
-            yaxis_title='outputs', autosize=False, width=600, height=400
-    )
-    return go.Frame(data=data, layout=layout)
-
 # Function to plot animation of neuron outputs
-def plot_animation(par, x, y, n_hidden, frame_list):
-    # Buttons for animation
+def plot_animation(par, x, y, n_hidden, data_list):
+#     Buttons for animation
     play_but = dict(
         label="Play", method="animate", 
-        args=[None, {"transition": {"duration": 0}, "frame": {"duration": 500}}]
+        args=[None, {"transition": {"duration": 0}, "frame": {"duration": 100}}]
     )
     pause_but = dict(
         label="Pause", method="animate",
@@ -57,24 +58,32 @@ def plot_animation(par, x, y, n_hidden, frame_list):
                      "mode": "immediate", "transition": {"duration": 0}}]
     ) 
     
-    # Make animation
+#     Frames for animations
+    frame_list = []
+    for data in data_list:
+        frame_list = frame_list + [go.Frame(data=data)]
+    
+#     Make animation
     fig = go.Figure(
-        data = make_plot_data(par, x, y, n_hidden), 
+        data = data_list[0], 
         layout = go.Layout(
             autosize=False, width=600, height=400, xaxis_title="x", 
-            title='Learning animation', yaxis_title='outputs', 
+            title='Network output while training', yaxis_title='outputs', 
             updatemenus=[dict(type="buttons", buttons=[play_but, pause_but])]
         ),
         frames = frame_list
     )
+    y_np = y.detach().numpy()
+    fig.update_yaxes(range=[np.min(y_np) - 0.1, np.max(y_np) + 0.1])
     fig.update_traces(hoverinfo='skip')
     fig.show()
 
 # Function to plot loss
 def plot_loss(loss_vec):
     layout = dict(
-        title='Loss over gradient descent', xaxis_title="Iteration", 
-        yaxis_title='Loss', autosize=False, width=600, height=400
+        title='Batch loss while training', xaxis_title="Iteration", 
+        yaxis_title='Loss', autosize=False, width=600, height=400,
+        
     )
     fig = go.Figure(data=go.Scatter(y=loss_vec.detach()), layout=layout)
     fig.update_traces(hoverinfo='skip')
