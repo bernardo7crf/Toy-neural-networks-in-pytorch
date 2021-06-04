@@ -47,7 +47,7 @@ def plot_neurons(par, x, y, n_hidden, title):
     fig.show()
 
 # Function to plot animation of neuron outputs
-def plot_animation(y, data_list):
+def plot_animation(y, data_list, showlegend=True):
 #     Buttons for animation
     play_but = dict(
         label="Play", method="animate", 
@@ -77,6 +77,7 @@ def plot_animation(y, data_list):
     y_np = y.detach().numpy()
     fig.update_yaxes(range=[np.min(y_np) - 0.1, np.max(y_np) + 0.1])
     fig.update_traces(hoverinfo='skip')
+    fig.update_layout(showlegend=showlegend)
     fig.show()
 
 # Function to plot loss

@@ -136,4 +136,4 @@ def var_inf(
         losses[t] = loss.item()
         pbar.set_postfix(loss=loss.item())
         
-    plot_animation(y, data_list)
+    plot_animation(y, data_list, showlegend=False)
