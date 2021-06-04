@@ -1,6 +1,8 @@
 # Import packages
 import numpy as np
 import torch
+import torch.distributions as td    # PyTorch's probability distributions package
+from tqdm.notebook import trange    # progress bars
 from tools import *
 from plotting import *
 
@@ -33,7 +35,7 @@ def loss(par, x, y, n_hidden):
     return (y - N1)**2
 
 # Gradient descent function
-def fit_nn(par, x, y, n_hidden, batch_p=0.1, lr=1e-5, 
+def grad_desc(par, x, y, n_hidden, batch_p=0.1, lr=1e-5, 
            tol=1e-6, max_it=int(5e2), its_per_frm=10):
 #     Loss, iteration counter, number of reinitialised parameters, 
 #     frames for animation, random number generator
@@ -86,8 +88,52 @@ def fit_nn(par, x, y, n_hidden, batch_p=0.1, lr=1e-5,
 
     # Plot loss, learning, and final outputs
     plot_neurons(par, x, y, n_hidden, title="Final neuron outputs")
-    plot_animation(par, x, y, n_hidden, data_list)
+    plot_animation(y, data_list)
     plot_loss(loss_vec)
 
 #     Return updated parameters
     return(par)
+
+# KL divergence for variational inference (actually ELBO) - should add prior later
+def kl_divergence(
+    q_samples: torch.Tensor, x, y, y_dist: td.Distribution, q_dist: td.Distribution,
+    n_samples: int, n_hidden: int
+) -> torch.Tensor:
+    q_y_samples = torch.zeros((n_samples, 101))
+    for s in range(n_samples):
+        W0, b0, W1, b1 = par_split(q_samples[s, :], n_hidden)
+        A0 = x @ W0 + b0
+        N0 = torch.maximum(A0, torch.zeros_like(A0))
+        N1 = N0 @ W1 + b1
+        q_y_samples[s, :] = N1[:, 0]
+
+    return (q_dist.log_prob(q_samples) - y_dist.log_prob(q_y_samples)).mean()
+
+# Variational inference
+def var_inf(
+    q_mean, log_q_sd, x, y, n_hidden, n_iterations = 500, plot_every = 100, 
+    n_samples = 20
+):
+    y_dist = td.MultivariateNormal(loc=y[:, 0], covariance_matrix=0.01 * torch.eye(101))
+    opt = torch.optim.Adam([q_mean, log_q_sd], lr=1e-1) # optimisation algorithm
+    losses = torch.zeros(n_iterations)
+    pbar = trange(n_iterations)
+    data_list = []
+
+    for t in pbar:
+        opt.zero_grad()
+        q_dist = td.MultivariateNormal(loc=q_mean, covariance_matrix=torch.diag(torch.exp(log_q_sd)))
+        q_samples = q_dist.rsample([n_samples])
+
+        if (t % plot_every == 0):
+            data = make_samps_data(y_dist, q_samples, x, y, n_hidden, n_samples)
+            data_list = data_list + [data]
+#             plot_samps(data)
+
+        loss = kl_divergence(q_samples, x, y, y_dist, q_dist, n_samples, n_hidden) # KL divergence empirical approximation
+        loss.backward()
+        opt.step()
+        losses[t] = loss.item()
+        pbar.set_postfix(loss=loss.item())
+        
+    plot_animation(y, data_list)

@@ -1,6 +1,7 @@
 # Import packages
 import numpy as np
 import torch
+import torch.distributions as td    # PyTorch's probability distributions package
 import plotly.graph_objects as go
 from tools import *
 
@@ -46,7 +47,7 @@ def plot_neurons(par, x, y, n_hidden, title):
     fig.show()
 
 # Function to plot animation of neuron outputs
-def plot_animation(par, x, y, n_hidden, data_list):
+def plot_animation(y, data_list):
 #     Buttons for animation
     play_but = dict(
         label="Play", method="animate", 
@@ -83,8 +84,37 @@ def plot_loss(loss_vec):
     layout = dict(
         title='Batch loss while training', xaxis_title="Iteration", 
         yaxis_title='Loss', autosize=False, width=600, height=400,
-        
     )
     fig = go.Figure(data=go.Scatter(y=loss_vec.detach()), layout=layout)
     fig.update_traces(hoverinfo='skip')
+    fig.show()
+    
+def make_samps_data(y_dist, q_samples, x, y, n_hidden, n_samples):
+    # Plot posterior predictive samples of y and network outputs
+    y_samples = y_dist.rsample(sample_shape=torch.Size([50]))
+    data = []
+    for s in range(n_samples):
+        W0, b0, W1, b1 = par_split(q_samples[s, :], n_hidden)
+        A0 = x @ W0 + b0
+        N0 = torch.maximum(A0, torch.zeros_like(A0))
+        N1 = N0 @ W1 + b1
+        data = data + [
+            go.Scatter(
+                x=x[:, 0], y=y_samples[s, :].numpy(), mode='markers', 
+                marker_color='blue', opacity=0.1
+            ), go.Scatter(
+                x=x[:, 0], y=N1[:, 0].detach(), mode='markers', 
+                marker_color='red', opacity=0.1
+            )
+        ]
+    return data
+    
+def plot_samps(data):
+    layout = dict(
+        title="Samples from target and neural network", xaxis_title="x", 
+        yaxis_title='outputs', autosize=False, width=600, height=400
+    )
+    fig = go.Figure(data=data, layout=layout)
+    fig.update_traces(hoverinfo='skip')
+    fig.update_layout(showlegend=False)
     fig.show()
