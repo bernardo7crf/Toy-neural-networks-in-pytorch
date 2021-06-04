@@ -99,15 +99,21 @@ def kl_divergence(
     q_samples: torch.Tensor, x, y, y_dist: td.Distribution, q_dist: td.Distribution,
     n_samples: int, n_hidden: int
 ) -> torch.Tensor:
-    q_y_samples = torch.zeros((n_samples, 101))
+    y_given_q_samps = torch.zeros((n_samples, 101))
     for s in range(n_samples):
         W0, b0, W1, b1 = par_split(q_samples[s, :], n_hidden)
         A0 = x @ W0 + b0
         N0 = torch.maximum(A0, torch.zeros_like(A0))
         N1 = N0 @ W1 + b1
-        q_y_samples[s, :] = N1[:, 0]
+        y_given_q_samps[s, :] = N1[:, 0]
+        
+    n_par = 3 * n_hidden + 1
+    prior_dist = td.MultivariateNormal(
+        loc=torch.zeros(n_par), covariance_matrix=100 * torch.eye(n_par)
+    )
 
-    return (q_dist.log_prob(q_samples) - y_dist.log_prob(q_y_samples)).mean()
+    return (q_dist.log_prob(q_samples) - y_dist.log_prob(y_given_q_samps) - 
+            prior_dist.log_prob(q_samples)).mean()
 
 # Variational inference
 def var_inf(
