@@ -143,3 +143,4 @@ def var_inf(
         pbar.set_postfix(loss=loss.item())
         
     plot_animation(y, data_list, showlegend=False)
+    
