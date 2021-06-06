@@ -47,7 +47,7 @@ def plot_neurons(par, x, y, n_hidden, title):
     fig.show()
 
 # Function to plot animation of neuron outputs
-def plot_animation(y, data_list, showlegend=True):
+def plot_animation(y, data_list, showlegend=True, title='Network output while training'):
 #     Buttons for animation
     play_but = dict(
         label="Play", method="animate", 
@@ -69,7 +69,7 @@ def plot_animation(y, data_list, showlegend=True):
         data = data_list[0], 
         layout = go.Layout(
             autosize=False, width=600, height=400, xaxis_title="x", 
-            title='Network output while training', yaxis_title='outputs', 
+            title=title, yaxis_title='outputs', 
             updatemenus=[dict(type="buttons", buttons=[play_but, pause_but])]
         ),
         frames = frame_list
@@ -119,3 +119,31 @@ def plot_samps(data):
     fig.update_traces(hoverinfo='skip')
     fig.update_layout(showlegend=False)
     fig.show()
+    
+# Make data to plot output with implied target function
+def make_one_output_data(x, device, output, target):
+    return [
+        go.Scatter(x=x[:, 0], y=output, line_color='red'), 
+        go.Scatter(x=x[:, 0], y=target, line_color='blue')
+    ]
+
+def make_output_data(x, y, t, func, odeint, device):
+    ode_out = odeint(func, x.to(device), t).cpu().detach().numpy()[1, :][:, 0]
+    return [make_one_output_data(
+        x, device, output=func(0, x.to(device)).cpu().detach()[:, 0], 
+        target=y[:, 0] - x[:, 0]
+    )], [make_one_output_data(x, device, output=ode_out, target=y[:, 0])]
+
+def plot_outputs(nn_data, ode_data, title_val):
+    layout = dict(
+        title=f"{title_val} network output", xaxis_title="x", 
+        yaxis_title='outputs', autosize=False, width=600, height=400
+    )
+    fig = go.Figure(data=nn_data, layout=layout)
+    fig.update_traces(hoverinfo='skip')
+    fig.show()
+    layout.update({'title': f"{title_val} ODE output"})
+    fig = go.Figure(data=ode_data, layout=layout)
+    fig.update_traces(hoverinfo='skip')
+    fig.show()
+    
