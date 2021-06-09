@@ -11,7 +11,8 @@ def make_plot_data(
     include_samps=False
 ):
     # Find neuron outputs
-    par_np = par.detach().numpy()
+    x, y = x.cpu(), y.cpu()
+    par_np = par.detach().cpu().numpy()
     W0, b0, W1, b1 = par_split(par_np, n_hidden)
     A0 = x @ W0 + b0
     N0 = torch.maximum(A0, torch.zeros_like(A0))
@@ -20,6 +21,7 @@ def make_plot_data(
     # Make plot data for target function, neurons in hidden layer, and output
     data = [go.Scatter(x=x[:, 0], y=y[:, 0], name="y")]
     if (include_samps):
+        x_samp, y_samp = x_samp.cpu(), y_samp.cpu()
         data = data + [go.Scatter(
             x=x_samp[:, 0], y=y_samp[:, 0], mode='markers', marker_color='black',
             name=f"batch samples"
@@ -41,7 +43,7 @@ def plot_neurons(par, x, y, n_hidden, title):
         yaxis_title='outputs', autosize=False, width=600, height=400
     )
     fig = go.Figure(data=data, layout=layout)
-    y_np = y.detach().numpy()
+    y_np = y.detach().cpu().numpy()
     fig.update_yaxes(range=[np.min(y_np) - 0.1, np.max(y_np) + 0.1])
     fig.update_traces(hoverinfo='skip')
     fig.show()
@@ -74,7 +76,7 @@ def plot_animation(y, data_list, showlegend=True, title='Network output while tr
         ),
         frames = frame_list
     )
-    y_np = y.detach().numpy()
+    y_np = y.detach().cpu().numpy()
     fig.update_yaxes(range=[np.min(y_np) - 0.1, np.max(y_np) + 0.1])
     fig.update_traces(hoverinfo='skip')
     fig.update_layout(showlegend=showlegend)
