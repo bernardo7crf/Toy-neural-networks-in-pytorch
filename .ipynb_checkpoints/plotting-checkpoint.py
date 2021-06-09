@@ -53,12 +53,19 @@ def plot_animation(y, data_list, showlegend=True, title='Network output while tr
 #     Buttons for animation
     play_but = dict(
         label="Play", method="animate", 
-        args=[None, {"transition": {"duration": 0}, "frame": {"duration": 100}}]
+        args=[None, {
+            "frame": {"duration": 100, "redraw": False},
+            "fromcurrent": True, 
+            "transition": {"duration": 0,"easing": "quadratic-in-out"}
+        }]
     )
     pause_but = dict(
         label="Pause", method="animate",
-        args=[None, {"frame": {"duration": 0, "redraw": False},
-                     "mode": "immediate", "transition": {"duration": 0}}]
+        args=[[None], {
+            "frame": {"duration": 0, "redraw": False},
+            "mode": "immediate",
+            "transition": {"duration": 0}
+        }]
     ) 
     
 #     Frames for animations
@@ -72,7 +79,17 @@ def plot_animation(y, data_list, showlegend=True, title='Network output while tr
         layout = go.Layout(
             autosize=False, width=600, height=400, xaxis_title="x", 
             title=title, yaxis_title='outputs', 
-            updatemenus=[dict(type="buttons", buttons=[play_but, pause_but])]
+            updatemenus=[{
+                "type": "buttons", 
+                "buttons": [play_but, pause_but],
+                "direction": "left",
+                "pad": {"r": 10, "t": 87},
+                "showactive": False,
+                "x": 0.1,
+                "xanchor": "right",
+                "y": 0,
+                "yanchor": "top"
+            }]
         ),
         frames = frame_list
     )
